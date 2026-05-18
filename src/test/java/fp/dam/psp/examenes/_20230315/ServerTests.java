@@ -387,18 +387,65 @@ class ServerTests {
 	@SuppressWarnings("resource")
 	@Test
 	@DisplayName("(0,2 puntos) Petición \"cifrar\" sin alias: TIMEOUT")
+//	void test17() {
+//		try (Socket socket = new Socket("localhost", 9000)){
+//			socket.setSoTimeout(10000);
+//			
+//			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+//			out.writeUTF("cifrar");
+//			
+//			assertEquals("ERROR:timeout leyendo alias", new DataInputStream(socket.getInputStream()).readUTF());
+//			calificación += 0.2;
+//		} catch (IOException e) {
+//			fail(e.getLocalizedMessage());
+//		}
+//	}
+	
 	void test17() {
-		try (Socket socket = new Socket("localhost", 9000)){
-			socket.setSoTimeout(10000);
-			
-			DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-			out.writeUTF("cifrar");
-			
-			assertEquals("ERROR:timeout leyendo alias", new DataInputStream(socket.getInputStream()).readUTF());
-			calificación += 0.2;
-		} catch (IOException e) {
-			fail(e.getLocalizedMessage());
-		}
+	    try (Socket socket = new Socket("localhost", 9000)) {
+
+	        socket.setSoTimeout(10000);
+
+	        String texto = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. ".repeat(20);
+
+	        DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+
+	        out.writeUTF("cifrar");
+	        out.writeUTF("psp");
+	        out.write(texto.getBytes());
+	        socket.shutdownOutput();
+
+	        DataInputStream in = new DataInputStream(socket.getInputStream());
+
+	        Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+	        cipher.init(Cipher.DECRYPT_MODE,
+	                ks.getKey("psp", "practicas".toCharArray()));
+
+	        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+
+	        while (true) {
+	            String respuesta = in.readUTF();
+
+	            String[] partes = respuesta.split(":");
+
+	            if (partes[0].equals("OK")) {
+
+	                byte[] bloque = Base64.getDecoder().decode(partes[1]);
+
+	                buffer.write(cipher.doFinal(bloque));
+
+	            } else if (partes[0].equals("FIN")) {
+	                break;
+	            }
+	        }
+
+	        assertEquals(texto, new String(buffer.toByteArray()));
+
+	        calificación += 0.2;
+
+	    } catch (Exception e) {
+	        fail(e.getLocalizedMessage());
+	    }
 	}
 	
 	@SuppressWarnings("resource")
